@@ -1,0 +1,13 @@
+# Environment
+.env
+__pycache__/
+*.pyc
+
+# Data & Chroma
+data/chroma/*
+data/library/*
+!data/.gitkeep
+
+# Temporary files
+/tmp/*
+*.pdf
