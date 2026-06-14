@@ -1,0 +1,5 @@
+- name: Build and Deploy
+  env:
+  REACT_APP_STREAM_API_KEY: $   {{ secrets.STREAM_API_KEY}}     run: |
+   npm install
+   npm run build
