@@ -7,6 +7,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Create data directories
+RUN mkdir -p data/library data/chroma /tmp
+
 EXPOSE 8501
 
 CMD ["streamlit", "run", "src/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
