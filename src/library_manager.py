@@ -8,15 +8,25 @@ from llm_router import get_legal_response
 CHROMA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "chroma")
 os.makedirs(CHROMA_PATH, exist_ok=True)
 
+# محاولة تهيئة ChromaDB مع معالجة الأخطاء
+collection = None
 try:
     client = chromadb.PersistentClient(path=CHROMA_PATH)
-    embedding_function = embedding_functions.GoogleGenerativeAiEmbeddingFunction(
-        api_key=os.getenv("GEMINI_API_KEY", ""),
-        model_name="models/embedding-001"
-    )
-    collection = client.get_or_create_collection(name="legal_library", embedding_function=embedding_function)
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    
+    if gemini_key:
+        embedding_function = embedding_functions.GoogleGenerativeAiEmbeddingFunction(
+            api_key=gemini_key,
+            model_name="models/embedding-001"
+        )
+        collection = client.get_or_create_collection(
+            name="legal_library", 
+            embedding_function=embedding_function
+        )
+    else:
+        print("تحذير: GEMINI_API_KEY غير موجود - ChromaDB سيكون معطلاً")
 except Exception as e:
-    print(f"تحذير: فشل تهيئة ChromaDB: {e}")
+    print(f"خطأ في تهيئة ChromaDB: {e}")
     collection = None
 
 LIBRARY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "library")
@@ -33,7 +43,9 @@ def generate_smart_tags(document_text: str, item_type: str) -> str:
     
     try:
         response = get_legal_response(prompt, system_prompt="", preferred_model="gemini")
-        return response.strip()[:130]
+        if response and not response.startswith("⚠️") and not response.startswith("❌"):
+            return response.strip()[:130]
+        return "قانون مصري, عام"
     except Exception as e:
         print(f"خطأ في التصنيف الذكي: {e}")
         return "قانون مصري, عام"
