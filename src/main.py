@@ -5,8 +5,9 @@ import traceback
 
 sys.path.append(os.path.dirname(__file__))
 
+# محاولة استيراد المكونات مع معالجة الأخطاء
 try:
-    from database import init_db, add_library_item, get_all_library_items
+    from database import init_db, get_all_library_items
     from pdf_utils import extract_text_from_pdf
     from library_manager import upload_to_library, semantic_search_in_library, get_library_summary
     from llm_router import get_legal_response
@@ -14,7 +15,10 @@ except ImportError as e:
     st.error(f"❌ خطأ في الاستيراد: {e}")
     st.stop()
 
-init_db()
+try:
+    init_db()
+except Exception as e:
+    st.warning(f"تحذير في تهيئة قاعدة البيانات: {e}")
 
 st.set_page_config(
     page_title="Dilta-law | المساعد القانوني الذكي",
@@ -77,7 +81,6 @@ with tab1:
                         st.error(result.get("message", "حدث خطأ"))
             except Exception as e:
                 st.error(f"❌ حدث خطأ: {str(e)}")
-                st.write(traceback.format_exc())
 
     st.divider()
     st.subheader("📊 محتويات المكتبة")
@@ -85,10 +88,12 @@ with tab1:
         summary = get_library_summary()
         st.metric("إجمالي العناصر في المكتبة", summary["total_items"])
         
-        if summary.get("items"):
+        if summary.get("items") and summary["total_items"] > 0:
             st.write("**العناصر المرفوعة:**")
             for item in summary.get("items", []):
                 st.write(f"- {item['title']} ({item['item_type']})")
+        else:
+            st.info("لا توجد وثائق مرفوعة حتى الآن")
     except Exception as e:
         st.warning(f"تنبيه: {str(e)}")
 
@@ -96,7 +101,11 @@ with tab1:
 with tab2:
     st.header("🔍 البحث الدلالي والتحليل الذكي")
 
-    query = st.text_area("اكتب استشارتك أو سؤالك القانوني:", height=100, placeholder="مثال: ما هي حقوق العامل في القانون المصري؟")
+    query = st.text_area(
+        "اكتب استشارتك أو سؤالك القانوني:", 
+        height=100, 
+        placeholder="مثال: ما هي حقوق العامل في القانون المصري؟"
+    )
 
     search_type = st.radio("نوع البحث", ["بحث دلالي في المكتبة", "تحليل مباشر بالـ AI"])
 
@@ -120,18 +129,24 @@ with tab2:
                                         st.write(doc[:500] + "..." if len(doc) > 500 else doc)
                         else:
                             st.info("⚠️ لم يتم العثور على نتائج. تأكد من وجود وثائق في المكتبة أولاً.")
-                    else:
+                    
+                    else:  # تحليل مباشر بالـ AI
                         system_path = os.path.join(os.path.dirname(__file__), "..", "prompts", "system.txt")
                         system = ""
+                        
                         if os.path.exists(system_path):
-                            with open(system_path, "r", encoding="utf-8") as f:
-                                system = f.read()
+                            try:
+                                with open(system_path, "r", encoding="utf-8") as f:
+                                    system = f.read()
+                            except Exception as e:
+                                st.warning(f"تحذير: لم يتم تحميل ملف system.txt: {e}")
                         else:
-                            st.warning("⚠️ لم يتم العثور على ملف system.txt")
+                            st.warning(f"⚠️ لم يتم العثور على ملف system.txt في المسار: {system_path}")
                         
                         response = get_legal_response(query, system_prompt=system, preferred_model=preferred_model)
                         st.subheader("⚖️ إجابة الوكيل القانوني")
                         st.markdown(response)
+                        
             except Exception as e:
                 st.error(f"❌ حدث خطأ: {str(e)}")
                 st.write(traceback.format_exc())
