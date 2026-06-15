@@ -28,11 +28,28 @@ st.set_page_config(
 
 st.title("⚖️ Dilta-law")
 st.markdown("### المساعد القانوني الذكي للقانون المصري")
-st.caption("يعتمد كلياً على المحتوى الذي ترفعه | نماذج مجانية")
+st.caption("يعتمد كلياً على المحتوى الذي ترفعه | نماذج مجانية | v0.2")
 
 # Sidebar
 with st.sidebar:
     st.header("⚙️ الإعدادات")
+    
+    # عرض حالة API Keys
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    xai_key = os.getenv("XAI_API_KEY", "")
+    
+    if gemini_key and gemini_key != "vavv xlem qpmz krso":
+        st.success("✅ GEMINI_API_KEY موجود")
+    else:
+        st.error("❌ GEMINI_API_KEY غير صحيح أو مفقود")
+    
+    if xai_key and xai_key.startswith("xai-"):
+        st.success("✅ XAI_API_KEY موجود")
+    else:
+        st.warning("⚠️ XAI_API_KEY غير موجود (اختياري)")
+    
+    st.divider()
+    
     model_choice = st.selectbox(
         "النموذج المستخدم في التحليل",
         ["Gemini Flash (مجاني - موصى به)", "Grok (يتطلب API Key)"]
@@ -149,7 +166,8 @@ with tab2:
                         
             except Exception as e:
                 st.error(f"❌ حدث خطأ: {str(e)}")
-                st.write(traceback.format_exc())
+                with st.expander("📋 تفاصيل الخطأ"):
+                    st.write(traceback.format_exc())
 
 # ==================== TAB 3: إدارة الأحكام ====================
 with tab3:
