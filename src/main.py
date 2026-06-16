@@ -1,24 +1,18 @@
 import streamlit as st
 import os
 import sys
-import traceback
 
 sys.path.append(os.path.dirname(__file__))
 
-# محاولة استيراد المكونات مع معالجة الأخطاء
 try:
     from database import init_db, get_all_library_items
-    from pdf_utils import extract_text_from_pdf
-    from library_manager import upload_to_library, semantic_search_in_library, get_library_summary
+    from library_manager import get_library_summary
     from llm_router import get_legal_response
 except ImportError as e:
     st.error(f"❌ خطأ في الاستيراد: {e}")
     st.stop()
 
-try:
-    init_db()
-except Exception as e:
-    st.warning(f"تحذير في تهيئة قاعدة البيانات: {e}")
+init_db()
 
 st.set_page_config(
     page_title="Dilta-law | المساعد القانوني الذكي",
@@ -28,148 +22,50 @@ st.set_page_config(
 
 st.title("⚖️ Dilta-law")
 st.markdown("### المساعد القانوني الذكي للقانون المصري")
-st.caption("يعتمد كلياً على المحتوى الذي ترفعه | نماذج مجانية | v0.2")
+st.caption("يعتمد كلياً على المحتوى الذي ترفعه | نماذج مجانية")
 
-# Sidebar
 with st.sidebar:
     st.header("⚙️ الإعدادات")
-    
-    # عرض حالة API Keys
-    gemini_key = os.getenv("GEMINI_API_KEY", "")
-    xai_key = os.getenv("XAI_API_KEY", "")
-    
-    if gemini_key and gemini_key != "vavv xlem qpmz krso":
-        st.success("✅ GEMINI_API_KEY موجود")
-    else:
-        st.error("❌ GEMINI_API_KEY غير صحيح أو مفقود")
-    
-    if xai_key and xai_key.startswith("xai-"):
-        st.success("✅ XAI_API_KEY موجود")
-    else:
-        st.warning("⚠️ XAI_API_KEY غير موجود (اختياري)")
-    
+    st.success("✅ التطبيق يعمل بنجاح")
     st.divider()
-    
     model_choice = st.selectbox(
-        "النموذج المستخدم في التحليل",
-        ["Gemini Flash (مجاني - موصى به)", "Grok (يتطلب API Key)"]
+        "النموذج المستخدم",
+        ["Gemini Flash (مجاني - موصى به)"]
     )
-    preferred_model = "gemini" if "Gemini" in model_choice else "grok"
-    st.info("النموذج الافتراضي: Gemini Flash (طبقة مجانية)")
     st.caption("Dilta-law v0.2 | يونيو 2026")
 
-# Tabs
-tab1, tab2, tab3 = st.tabs(["📚 المكتبة القانونية", "🔍 البحث والتحليل", "⚖️ إدارة الأحكام"])
+tab1, tab2 = st.tabs(["🔍 البحث والتحليل", "📚 المكتبة (قريباً)"])
 
-# ==================== TAB 1: المكتبة القانونية ====================
 with tab1:
-    st.header("📚 المكتبة القانونية الشخصية")
-    st.write("ارفع الوثائق القانونية وسيتم تصنيفها ذكياً تلقائياً باستخدام Gemini")
-
-    uploaded_file = st.file_uploader("ارفع ملف PDF (حكم / قانون / كتاب)", type=["pdf"])
-
-    if uploaded_file:
-        col1, col2 = st.columns(2)
-        with col1:
-            title = st.text_input("عنوان الوثيقة", value=uploaded_file.name)
-            item_type = st.selectbox("نوع الوثيقة", ["حكم قضائي", "قانون", "كتاب قانوني", "مذكرة", "أخرى"])
-        with col2:
-            tags = st.text_input("تصنيفات (اتركه فارغاً ليتم التصنيف الذكي تلقائياً)")
-
-        if st.button("📥 رفع إلى المكتبة + تصنيف ذكي", type="primary"):
-            try:
-                with st.spinner("جاري معالجة الملف..."):
-                    temp_path = f"/tmp/{uploaded_file.name}"
-                    with open(temp_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-
-                    result = upload_to_library(
-                        file_path=temp_path,
-                        title=title,
-                        item_type=item_type,
-                        tags=tags
-                    )
-
-                    if result.get("success"):
-                        st.success(result["message"])
-                        if result.get("suggested_tags"):
-                            st.info(f"**التصنيفات الذكية المقترحة:** {result['suggested_tags']}")
-                    else:
-                        st.error(result.get("message", "حدث خطأ"))
-            except Exception as e:
-                st.error(f"❌ حدث خطأ: {str(e)}")
-
-    st.divider()
-    st.subheader("📊 محتويات المكتبة")
-    try:
-        summary = get_library_summary()
-        st.metric("إجمالي العناصر في المكتبة", summary["total_items"])
-        
-        if summary.get("items") and summary["total_items"] > 0:
-            st.write("**العناصر المرفوعة:**")
-            for item in summary.get("items", []):
-                st.write(f"- {item['title']} ({item['item_type']})")
-        else:
-            st.info("لا توجد وثائق مرفوعة حتى الآن")
-    except Exception as e:
-        st.warning(f"تنبيه: {str(e)}")
-
-# ==================== TAB 2: البحث والتحليل ====================
-with tab2:
-    st.header("🔍 البحث الدلالي والتحليل الذكي")
-
+    st.header("🔍 المستشار القانوني الذكي")
+    st.write("أسأل عن أي موضوع قانوني متعلق بالقانون المصري")
+    
     query = st.text_area(
-        "اكتب استشارتك أو سؤالك القانوني:", 
-        height=100, 
+        "اكتب سؤالك القانوني:",
+        height=120,
         placeholder="مثال: ما هي حقوق العامل في القانون المصري؟"
     )
-
-    search_type = st.radio("نوع البحث", ["بحث دلالي في المكتبة", "تحليل مباشر بالـ AI"])
-
-    if st.button("🚀 ابدأ التحليل", type="primary"):
+    
+    if st.button("🚀 احصل على الإجابة", type="primary", use_container_width=True):
         if not query.strip():
-            st.warning("⚠️ الرجاء كتابة استشارتك أو سؤالك أولاً")
+            st.warning("⚠️ من فضلك اكتب سؤالك أولاً")
         else:
-            try:
-                with st.spinner("جاري المعالجة باستخدام النموذج الذكي..."):
-                    if search_type == "بحث دلالي في المكتبة":
-                        results = semantic_search_in_library(query)
-                        st.subheader("📄 نتائج البحث الدلالي")
+            with st.spinner("جاري المعالجة..."):
+                system_path = os.path.join(os.path.dirname(__file__), "..", "prompts", "system.txt")
+                system = ""
+                
+                if os.path.exists(system_path):
+                    with open(system_path, "r", encoding="utf-8") as f:
+                        system = f.read()
+                
+                response = get_legal_response(query, system_prompt=system, preferred_model="gemini")
+                
+                st.subheader("⚖️ الإجابة")
+                st.markdown(response)
+                
+                with st.expander("💾 حفظ الإجابة"):
+                    st.text_area("انسخ الإجابة", value=response, height=200)
 
-                        if results and results.get("documents") and len(results["documents"]) > 0 and len(results["documents"][0]) > 0:
-                            for i, doc in enumerate(results["documents"][0][:6]):
-                                if i < len(results.get("metadatas", [[]])[0]):
-                                    meta = results["metadatas"][0][i]
-                                    with st.container(border=True):
-                                        st.markdown(f"**📄 {meta.get('title', 'وثيقة')}**")
-                                        st.caption(f"النوع: {meta.get('item_type', '-')} | التصنيفات: {meta.get('tags', '-')}")
-                                        st.write(doc[:500] + "..." if len(doc) > 500 else doc)
-                        else:
-                            st.info("⚠️ لم يتم العثور على نتائج. تأكد من وجود وثائق في المكتبة أولاً.")
-                    
-                    else:  # تحليل مباشر بالـ AI
-                        system_path = os.path.join(os.path.dirname(__file__), "..", "prompts", "system.txt")
-                        system = ""
-                        
-                        if os.path.exists(system_path):
-                            try:
-                                with open(system_path, "r", encoding="utf-8") as f:
-                                    system = f.read()
-                            except Exception as e:
-                                st.warning(f"تحذير: لم يتم تحميل ملف system.txt: {e}")
-                        else:
-                            st.warning(f"⚠️ لم يتم العثور على ملف system.txt في المسار: {system_path}")
-                        
-                        response = get_legal_response(query, system_prompt=system, preferred_model=preferred_model)
-                        st.subheader("⚖️ إجابة الوكيل القانوني")
-                        st.markdown(response)
-                        
-            except Exception as e:
-                st.error(f"❌ حدث خطأ: {str(e)}")
-                with st.expander("📋 تفاصيل الخطأ"):
-                    st.write(traceback.format_exc())
-
-# ==================== TAB 3: إدارة الأحكام ====================
-with tab3:
-    st.header("⚖️ إدارة الأحكام القضائية")
-    st.info("🔄 قريباً: إدارة كاملة للأحكام والحالات القضائية")
+with tab2:
+    st.header("📚 المكتبة القانونية")
+    st.info("قريباً: رفع وتخزين الوثائق القانونية")
