@@ -10,5 +10,5 @@ def extract_text_from_pdf(file_path: str) -> str:
                 if page_text:
                     text += page_text + "\n\n"
         return text.strip()
-    except:
+    except (ImportError, OSError, ValueError):
         return ""

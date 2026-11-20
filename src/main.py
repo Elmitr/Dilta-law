@@ -2,6 +2,12 @@ import streamlit as st
 import os
 import sys
 
+st.set_page_config(
+    page_title="Dilta-law | المساعد القانوني الذكي",
+    page_icon="⚖️",
+    layout="wide"
+)
+
 sys.path.append(os.path.dirname(__file__))
 
 try:
@@ -13,12 +19,6 @@ except ImportError as e:
     st.stop()
 
 init_db()
-
-st.set_page_config(
-    page_title="Dilta-law | المساعد القانوني الذكي",
-    page_icon="⚖️",
-    layout="wide"
-)
 
 st.title("⚖️ Dilta-law")
 st.markdown("### المساعد القانوني الذكي للقانون المصري")
